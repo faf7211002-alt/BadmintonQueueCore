@@ -1,0 +1,291 @@
+﻿@{
+    ViewData["Title"] = "羽球排隊系統";
+
+    var waitingPlayers = ViewBag.WaitingPlayers as List<BadmintonQueueCore.Models.Player>;
+    var readyGroups = ViewBag.ReadyGroups as Dictionary<int, List<BadmintonQueueCore.Models.Player>>;
+    var courtAPlayers = ViewBag.CourtAPlayers as List<BadmintonQueueCore.Models.Player>;
+    var courtBPlayers = ViewBag.CourtBPlayers as List<BadmintonQueueCore.Models.Player>;
+}
+
+<style>
+    .page-title {
+        margin-bottom: 16px;
+        font-weight: 700;
+    }
+
+    .add-form {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+        .add-form input {
+            max-width: 220px;
+        }
+
+    .main-layout {
+        display: grid;
+        grid-template-columns: 1.2fr 1.5fr 1fr 1fr;
+        gap: 16px;
+        align-items: start;
+    }
+
+    .area-card {
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 14px;
+        background: #fff;
+        min-height: 140px;
+    }
+
+    .area-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    .player-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 8px;
+        margin-bottom: 8px;
+        background: #fafafa;
+    }
+
+    .player-name {
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .btn-sm-custom {
+        padding: 3px 8px;
+        font-size: 13px;
+    }
+
+    .ready-group {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 12px;
+        background: #fafafa;
+    }
+
+    .ready-title {
+        font-weight: 700;
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    .empty-text {
+        color: #777;
+        font-size: 14px;
+    }
+
+    @@media (max-width: 1000px) {
+        .main-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<h1 class="page-title">羽球排隊系統</h1>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-warning">
+        @TempData["Message"]
+    </div>
+}
+
+<form asp-action="AddPlayer" method="post" class="add-form">
+    <input class="form-control" type="text" name="playerName" placeholder="輸入姓名" required />
+    <button class="btn btn-primary" type="submit">加入等待區</button>
+</form>
+
+<div class="main-layout">
+
+    <section class="area-card">
+        <div class="area-title">等待區</div>
+
+        @if (waitingPlayers != null && waitingPlayers.Any())
+        {
+            var index = 1;
+
+            foreach (var player in waitingPlayers)
+            {
+                <div class="player-card">
+                    <div class="player-name">@index. @player.PlayerName</div>
+
+                    <div class="btn-row">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <form asp-action="MoveToReady" method="post">
+                                <input type="hidden" name="id" value="@player.Id" />
+                                <input type="hidden" name="groupNo" value="@i" />
+                                <button class="btn btn-outline-primary btn-sm-custom" type="submit">備戰 @(i)</button>
+                            </form>
+                        }
+
+                        <form asp-action="MoveWaitingToCourt" method="post">
+                            <input type="hidden" name="id" value="@player.Id" />
+                            <input type="hidden" name="courtNo" value="1" />
+                            <button class="btn btn-outline-success btn-sm-custom" type="submit">上 A</button>
+                        </form>
+
+                        <form asp-action="MoveWaitingToCourt" method="post">
+                            <input type="hidden" name="id" value="@player.Id" />
+                            <input type="hidden" name="courtNo" value="2" />
+                            <button class="btn btn-outline-success btn-sm-custom" type="submit">上 B</button>
+                        </form>
+
+                        <form asp-action="DeletePlayer" method="post">
+                            <input type="hidden" name="id" value="@player.Id" />
+                            <button class="btn btn-outline-danger btn-sm-custom" type="submit">刪除</button>
+                        </form>
+                    </div>
+                </div>
+
+                index++;
+            }
+        }
+        else
+        {
+            <div class="empty-text">目前尚無等待球友</div>
+        }
+    </section>
+
+    <section class="area-card">
+        <div class="area-title">備戰區 1～5</div>
+
+        @if (readyGroups != null)
+        {
+            @for (int groupNo = 1; groupNo <= 5; groupNo++)
+            {
+                var groupPlayers = readyGroups[groupNo];
+
+                <div class="ready-group">
+                    <div class="ready-title">備戰區 @groupNo（@groupPlayers.Count/4）</div>
+
+                    <div class="btn-row" style="margin-bottom:8px;">
+                        <form asp-action="MoveReadyGroupToCourt" method="post">
+                            <input type="hidden" name="groupNo" value="@groupNo" />
+                            <input type="hidden" name="courtNo" value="1" />
+                            <button class="btn btn-success btn-sm-custom" type="submit">整組上 A</button>
+                        </form>
+
+                        <form asp-action="MoveReadyGroupToCourt" method="post">
+                            <input type="hidden" name="groupNo" value="@groupNo" />
+                            <input type="hidden" name="courtNo" value="2" />
+                            <button class="btn btn-success btn-sm-custom" type="submit">整組上 B</button>
+                        </form>
+                    </div>
+
+                    @if (groupPlayers.Any())
+                    {
+                        foreach (var player in groupPlayers)
+                        {
+                            <div class="player-card">
+                                <div class="player-name">@player.PlayerName</div>
+
+                                <div class="btn-row">
+                                    <form asp-action="MoveToCourt" method="post">
+                                        <input type="hidden" name="id" value="@player.Id" />
+                                        <input type="hidden" name="courtNo" value="1" />
+                                        <button class="btn btn-outline-success btn-sm-custom" type="submit">上 A</button>
+                                    </form>
+
+                                    <form asp-action="MoveToCourt" method="post">
+                                        <input type="hidden" name="id" value="@player.Id" />
+                                        <input type="hidden" name="courtNo" value="2" />
+                                        <button class="btn btn-outline-success btn-sm-custom" type="submit">上 B</button>
+                                    </form>
+
+                                    <form asp-action="BackToWaiting" method="post">
+                                        <input type="hidden" name="id" value="@player.Id" />
+                                        <button class="btn btn-outline-secondary btn-sm-custom" type="submit">回等待</button>
+                                    </form>
+
+                                    <form asp-action="DeletePlayer" method="post">
+                                        <input type="hidden" name="id" value="@player.Id" />
+                                        <button class="btn btn-outline-danger btn-sm-custom" type="submit">刪除</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="empty-text">空</div>
+                    }
+                </div>
+            }
+        }
+    </section>
+
+    <section class="area-card">
+        <div class="area-title">A場</div>
+
+        @if (courtAPlayers != null && courtAPlayers.Any())
+        {
+            foreach (var player in courtAPlayers)
+            {
+                <div class="player-card">
+                    <div class="player-name">@player.PlayerName</div>
+
+                    <div class="btn-row">
+                        <form asp-action="BackToWaiting" method="post">
+                            <input type="hidden" name="id" value="@player.Id" />
+                            <button class="btn btn-outline-secondary btn-sm-custom" type="submit">下場回等待</button>
+                        </form>
+
+                        <form asp-action="DeletePlayer" method="post">
+                            <input type="hidden" name="id" value="@player.Id" />
+                            <button class="btn btn-outline-danger btn-sm-custom" type="submit">刪除</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-text">目前無人</div>
+        }
+    </section>
+
+    <section class="area-card">
+        <div class="area-title">B場</div>
+
+        @if (courtBPlayers != null && courtBPlayers.Any())
+        {
+            foreach (var player in courtBPlayers)
+            {
+                <div class="player-card">
+                    <div class="player-name">@player.PlayerName</div>
+
+                    <div class="btn-row">
+                        <form asp-action="BackToWaiting" method="post">
+                            <input type="hidden" name="id" value="@player.Id" />
+                            <button class="btn btn-outline-secondary btn-sm-custom" type="submit">下場回等待</button>
+                        </form>
+
+                        <form asp-action="DeletePlayer" method="post">
+                            <input type="hidden" name="id" value="@player.Id" />
+                            <button class="btn btn-outline-danger btn-sm-custom" type="submit">刪除</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-text">目前無人</div>
+        }
+    </section>
+
+</div>
