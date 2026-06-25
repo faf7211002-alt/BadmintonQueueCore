@@ -7,6 +7,7 @@ namespace BadmintonQueueCore.Controllers
     public class HomeController : Controller
     {
         private readonly AppDbContext _db;
+        private const int MaxPlayers = 4;
 
         public HomeController(AppDbContext db)
         {
@@ -29,15 +30,13 @@ namespace BadmintonQueueCore.Controllers
                         .ToList()
                 );
 
-            ViewBag.CourtAPlayers = _db.Players
-                .Where(p => p.Status == "Playing" && p.CourtNo == 1)
-                .OrderBy(p => p.QueueNo)
-                .ToList();
+            ViewBag.CourtAPlayers = GetCourtPlayers(1);
+            ViewBag.CourtBPlayers = GetCourtPlayers(2);
+            ViewBag.CourtCPlayers = GetCourtPlayers(3);
 
-            ViewBag.CourtBPlayers = _db.Players
-                .Where(p => p.Status == "Playing" && p.CourtNo == 2)
-                .OrderBy(p => p.QueueNo)
-                .ToList();
+            ViewBag.TotalCount = _db.Players.Count();
+            ViewBag.WaitingCount = _db.Players.Count(p => p.Status == "Waiting");
+            ViewBag.ReadyCount = _db.Players.Count(p => p.Status == "Ready");
 
             return View();
         }
@@ -47,12 +46,10 @@ namespace BadmintonQueueCore.Controllers
         {
             if (!string.IsNullOrWhiteSpace(playerName))
             {
-                int nextQueueNo = GetNextQueueNo();
-
                 _db.Players.Add(new Player
                 {
                     PlayerName = playerName.Trim(),
-                    QueueNo = nextQueueNo,
+                    QueueNo = GetNextQueueNo(),
                     Status = "Waiting",
                     CourtNo = 0,
                     GroupNo = 0
@@ -63,19 +60,18 @@ namespace BadmintonQueueCore.Controllers
 
             return RedirectToAction("Index");
         }
+
         [HttpPost]
         public IActionResult MoveToReady(int id, int groupNo)
         {
             if (groupNo < 1 || groupNo > 5)
-            {
                 return RedirectToAction("Index");
-            }
 
             int readyCount = _db.Players.Count(p => p.Status == "Ready" && p.GroupNo == groupNo);
 
-            if (readyCount >= 4)
+            if (readyCount >= MaxPlayers)
             {
-                TempData["Message"] = $"備戰區 {groupNo} 已滿，最多只能 4 人";
+                TempData["Message"] = $"備戰區 {groupNo} 已滿，最多只能 {MaxPlayers} 人";
                 return RedirectToAction("Index");
             }
 
@@ -87,7 +83,6 @@ namespace BadmintonQueueCore.Controllers
                 player.CourtNo = 0;
                 player.GroupNo = groupNo;
                 player.QueueNo = GetNextQueueNo();
-
                 _db.SaveChanges();
             }
 
@@ -97,19 +92,14 @@ namespace BadmintonQueueCore.Controllers
         [HttpPost]
         public IActionResult MoveToCourt(int id, int courtNo)
         {
-            if (courtNo != 1 && courtNo != 2)
-            {
+            if (courtNo < 1 || courtNo > 3)
                 return RedirectToAction("Index");
-            }
 
-            int courtCount = _db.Players.Count(p => p.Status == "Playing" && p.CourtNo == courtNo);
+            int courtCount = GetCourtCount(courtNo);
 
-            if (courtCount >= 4)
+            if (courtCount >= MaxPlayers)
             {
-                TempData["Message"] = courtNo == 1
-       ? "A場已滿，最多只能 4 人"
-       : "B場已滿，最多只能 4 人";
-
+                TempData["Message"] = $"{GetCourtName(courtNo)}已滿，最多只能 {MaxPlayers} 人";
                 return RedirectToAction("Index");
             }
 
@@ -120,54 +110,17 @@ namespace BadmintonQueueCore.Controllers
                 player.Status = "Playing";
                 player.CourtNo = courtNo;
                 player.GroupNo = 0;
-
                 _db.SaveChanges();
             }
 
             return RedirectToAction("Index");
         }
-
-        [HttpPost]
-        public IActionResult MoveWaitingToCourt(int id, int courtNo)
-        {
-            if (courtNo != 1 && courtNo != 2)
-            {
-                return RedirectToAction("Index");
-            }
-
-            int courtCount = _db.Players.Count(p => p.Status == "Playing" && p.CourtNo == courtNo);
-
-            if (courtCount >= 4)
-            {
-                TempData["Message"] = courtNo == 1
-                    ? "A場已滿，最多只能 4 人"
-                    : "B場已滿，最多只能 4 人";
-
-                return RedirectToAction("Index");
-            }
-
-            var player = _db.Players.Find(id);
-
-            if (player != null)
-            {
-                player.Status = "Playing";
-                player.CourtNo = courtNo;
-                player.GroupNo = 0;
-
-                _db.SaveChanges();
-            }
-
-            return RedirectToAction("Index");
-        }
-
 
         [HttpPost]
         public IActionResult MoveReadyGroupToCourt(int groupNo, int courtNo)
         {
-            if (groupNo < 1 || groupNo > 5 || (courtNo != 1 && courtNo != 2))
-            {
+            if (groupNo < 1 || groupNo > 5 || courtNo < 1 || courtNo > 3)
                 return RedirectToAction("Index");
-            }
 
             var groupPlayers = _db.Players
                 .Where(p => p.Status == "Ready" && p.GroupNo == groupNo)
@@ -176,18 +129,16 @@ namespace BadmintonQueueCore.Controllers
 
             if (!groupPlayers.Any())
             {
+                TempData["Message"] = $"備戰區 {groupNo} 沒有人";
                 return RedirectToAction("Index");
             }
 
-            int courtCount = _db.Players.Count(p => p.Status == "Playing" && p.CourtNo == courtNo);
-            int totalAfterMove = courtCount + groupPlayers.Count;
+            int courtCount = GetCourtCount(courtNo);
 
-            if (totalAfterMove > 4)
+            if (courtCount + groupPlayers.Count > MaxPlayers)
             {
-                TempData["Message"] = courtNo == 1
-                    ? $"A場目前已有 {courtCount} 人，備戰區 {groupNo} 有 {groupPlayers.Count} 人，上場後會超過 4 人"
-                    : $"B場目前已有 {courtCount} 人，備戰區 {groupNo} 有 {groupPlayers.Count} 人，上場後會超過 4 人";
-
+                TempData["Message"] =
+                    $"{GetCourtName(courtNo)}目前已有 {courtCount} 人，備戰區 {groupNo} 有 {groupPlayers.Count} 人，上場後會超過 {MaxPlayers} 人";
                 return RedirectToAction("Index");
             }
 
@@ -206,6 +157,46 @@ namespace BadmintonQueueCore.Controllers
         }
 
         [HttpPost]
+        public IActionResult FinishCourt(int courtNo)
+        {
+            if (courtNo < 1 || courtNo > 3)
+                return RedirectToAction("Index");
+
+            var courtPlayers = _db.Players
+                .Where(p => p.Status == "Playing" && p.CourtNo == courtNo)
+                .ToList();
+
+            foreach (var player in courtPlayers)
+            {
+                player.Status = "Waiting";
+                player.CourtNo = 0;
+                player.GroupNo = 0;
+                player.QueueNo = GetNextQueueNo();
+            }
+
+            var readyOnePlayers = _db.Players
+                .Where(p => p.Status == "Ready" && p.GroupNo == 1)
+                .OrderBy(p => p.QueueNo)
+                .ToList();
+
+            if (readyOnePlayers.Any() && readyOnePlayers.Count <= MaxPlayers)
+            {
+                foreach (var player in readyOnePlayers)
+                {
+                    player.Status = "Playing";
+                    player.CourtNo = courtNo;
+                    player.GroupNo = 0;
+                }
+
+                ShiftReadyGroups(1);
+            }
+
+            _db.SaveChanges();
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
         public IActionResult BackToWaiting(int id)
         {
             var player = _db.Players.Find(id);
@@ -216,7 +207,6 @@ namespace BadmintonQueueCore.Controllers
                 player.CourtNo = 0;
                 player.GroupNo = 0;
                 player.QueueNo = GetNextQueueNo();
-
                 _db.SaveChanges();
             }
 
@@ -235,6 +225,19 @@ namespace BadmintonQueueCore.Controllers
             }
 
             return RedirectToAction("Index");
+        }
+
+        private List<Player> GetCourtPlayers(int courtNo)
+        {
+            return _db.Players
+                .Where(p => p.Status == "Playing" && p.CourtNo == courtNo)
+                .OrderBy(p => p.QueueNo)
+                .ToList();
+        }
+
+        private int GetCourtCount(int courtNo)
+        {
+            return _db.Players.Count(p => p.Status == "Playing" && p.CourtNo == courtNo);
         }
 
         private int GetNextQueueNo()
@@ -257,6 +260,17 @@ namespace BadmintonQueueCore.Controllers
                     player.GroupNo = i - 1;
                 }
             }
+        }
+
+        private string GetCourtName(int courtNo)
+        {
+            return courtNo switch
+            {
+                1 => "A場",
+                2 => "B場",
+                3 => "C場",
+                _ => "場地"
+            };
         }
     }
 }

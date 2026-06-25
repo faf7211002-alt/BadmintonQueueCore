@@ -5,12 +5,18 @@
     var readyGroups = ViewBag.ReadyGroups as Dictionary<int, List<BadmintonQueueCore.Models.Player>>;
     var courtAPlayers = ViewBag.CourtAPlayers as List<BadmintonQueueCore.Models.Player>;
     var courtBPlayers = ViewBag.CourtBPlayers as List<BadmintonQueueCore.Models.Player>;
+    var courtCPlayers = ViewBag.CourtCPlayers as List<BadmintonQueueCore.Models.Player>;
 }
 
 <style>
     .page-title {
-        margin-bottom: 16px;
         font-weight: 700;
+        margin-bottom: 16px;
+    }
+
+    .stats {
+        margin-bottom: 16px;
+        font-weight: 600;
     }
 
     .add-form {
@@ -25,8 +31,8 @@
 
     .main-layout {
         display: grid;
-        grid-template-columns: 1.2fr 1.5fr 1fr 1fr;
-        gap: 16px;
+        grid-template-columns: 1.1fr 1.5fr 1fr 1fr 1fr;
+        gap: 14px;
         align-items: start;
     }
 
@@ -35,7 +41,6 @@
         border-radius: 10px;
         padding: 14px;
         background: #fff;
-        min-height: 140px;
     }
 
     .area-title {
@@ -87,7 +92,7 @@
         font-size: 14px;
     }
 
-    @@media (max-width: 1000px) {
+    @@media (max-width:1200px) {
         .main-layout {
             grid-template-columns: 1fr;
         }
@@ -103,6 +108,15 @@
     </div>
 }
 
+<div class="stats">
+    總人數：@ViewBag.TotalCount　
+    等待：@ViewBag.WaitingCount　
+    備戰：@ViewBag.ReadyCount　
+    A場：@(courtAPlayers?.Count ?? 0)　
+    B場：@(courtBPlayers?.Count ?? 0)　
+    C場：@(courtCPlayers?.Count ?? 0)
+</div>
+
 <form asp-action="AddPlayer" method="post" class="add-form">
     <input class="form-control" type="text" name="playerName" placeholder="輸入姓名" required />
     <button class="btn btn-primary" type="submit">加入等待區</button>
@@ -116,7 +130,7 @@
         @if (waitingPlayers != null && waitingPlayers.Any())
         {
             var index = 1;
-             
+
             foreach (var player in waitingPlayers)
             {
                 <div class="player-card">
@@ -132,17 +146,14 @@
                             </form>
                         }
 
-                        <form asp-action="MoveWaitingToCourt" method="post">
-                            <input type="hidden" name="id" value="@player.Id" />
-                            <input type="hidden" name="courtNo" value="1" />
-                            <button class="btn btn-outline-success btn-sm-custom" type="submit">上 A</button>
-                        </form>
-
-                        <form asp-action="MoveWaitingToCourt" method="post">
-                            <input type="hidden" name="id" value="@player.Id" />
-                            <input type="hidden" name="courtNo" value="2" />
-                            <button class="btn btn-outline-success btn-sm-custom" type="submit">上 B</button>
-                        </form>
+                        @for (int courtNo = 1; courtNo <= 3; courtNo++)
+                        {
+                            <form asp-action="MoveToCourt" method="post">
+                                <input type="hidden" name="id" value="@player.Id" />
+                                <input type="hidden" name="courtNo" value="@courtNo" />
+                                <button class="btn btn-outline-success btn-sm-custom" type="submit">上 @GetCourtName(courtNo)</button>
+                            </form>
+                        }
 
                         <form asp-action="DeletePlayer" method="post">
                             <input type="hidden" name="id" value="@player.Id" />
@@ -173,17 +184,14 @@
                     <div class="ready-title">備戰區 @groupNo（@groupPlayers.Count/4）</div>
 
                     <div class="btn-row" style="margin-bottom:8px;">
-                        <form asp-action="MoveReadyGroupToCourt" method="post">
-                            <input type="hidden" name="groupNo" value="@groupNo" />
-                            <input type="hidden" name="courtNo" value="1" />
-                            <button class="btn btn-success btn-sm-custom" type="submit">整組上 A</button>
-                        </form>
-
-                        <form asp-action="MoveReadyGroupToCourt" method="post">
-                            <input type="hidden" name="groupNo" value="@groupNo" />
-                            <input type="hidden" name="courtNo" value="2" />
-                            <button class="btn btn-success btn-sm-custom" type="submit">整組上 B</button>
-                        </form>
+                        @for (int courtNo = 1; courtNo <= 3; courtNo++)
+                        {
+                            <form asp-action="MoveReadyGroupToCourt" method="post">
+                                <input type="hidden" name="groupNo" value="@groupNo" />
+                                <input type="hidden" name="courtNo" value="@courtNo" />
+                                <button class="btn btn-success btn-sm-custom" type="submit">整組上 @GetCourtName(courtNo)</button>
+                            </form>
+                        }
                     </div>
 
                     @if (groupPlayers.Any())
@@ -194,17 +202,14 @@
                                 <div class="player-name">@player.PlayerName</div>
 
                                 <div class="btn-row">
-                                    <form asp-action="MoveToCourt" method="post">
-                                        <input type="hidden" name="id" value="@player.Id" />
-                                        <input type="hidden" name="courtNo" value="1" />
-                                        <button class="btn btn-outline-success btn-sm-custom" type="submit">上 A</button>
-                                    </form>
-
-                                    <form asp-action="MoveToCourt" method="post">
-                                        <input type="hidden" name="id" value="@player.Id" />
-                                        <input type="hidden" name="courtNo" value="2" />
-                                        <button class="btn btn-outline-success btn-sm-custom" type="submit">上 B</button>
-                                    </form>
+                                    @for (int courtNo = 1; courtNo <= 3; courtNo++)
+                                    {
+                                        <form asp-action="MoveToCourt" method="post">
+                                            <input type="hidden" name="id" value="@player.Id" />
+                                            <input type="hidden" name="courtNo" value="@courtNo" />
+                                            <button class="btn btn-outline-success btn-sm-custom" type="submit">上 @GetCourtName(courtNo)</button>
+                                        </form>
+                                    }
 
                                     <form asp-action="BackToWaiting" method="post">
                                         <input type="hidden" name="id" value="@player.Id" />
@@ -228,64 +233,64 @@
         }
     </section>
 
-    <section class="area-card">
-        <div class="area-title">A場</div>
-
-        @if (courtAPlayers != null && courtAPlayers.Any())
-        {
-            foreach (var player in courtAPlayers)
-            {
-                <div class="player-card">
-                    <div class="player-name">@player.PlayerName</div>
-
-                    <div class="btn-row">
-                        <form asp-action="BackToWaiting" method="post">
-                            <input type="hidden" name="id" value="@player.Id" />
-                            <button class="btn btn-outline-secondary btn-sm-custom" type="submit">下場回等待</button>
-                        </form>
-
-                        <form asp-action="DeletePlayer" method="post">
-                            <input type="hidden" name="id" value="@player.Id" />
-                            <button class="btn btn-outline-danger btn-sm-custom" type="submit">刪除</button>
-                        </form>
-                    </div>
-                </div>
-            }
-        }
-        else
-        {
-            <div class="empty-text">目前無人</div>
-        }
-    </section>
-
-    <section class="area-card">
-        <div class="area-title">B場</div>
-
-        @if (courtBPlayers != null && courtBPlayers.Any())
-        {
-            foreach (var player in courtBPlayers)
-            {
-                <div class="player-card">
-                    <div class="player-name">@player.PlayerName</div>
-
-                    <div class="btn-row">
-                        <form asp-action="BackToWaiting" method="post">
-                            <input type="hidden" name="id" value="@player.Id" />
-                            <button class="btn btn-outline-secondary btn-sm-custom" type="submit">下場回等待</button>
-                        </form>
-
-                        <form asp-action="DeletePlayer" method="post">
-                            <input type="hidden" name="id" value="@player.Id" />
-                            <button class="btn btn-outline-danger btn-sm-custom" type="submit">刪除</button>
-                        </form>
-                    </div>
-                </div>
-            }
-        }
-        else
-        {
-            <div class="empty-text">目前無人</div>
-        }
-    </section>
+    @RenderCourt("A場", 1, courtAPlayers)
+    @RenderCourt("B場", 2, courtBPlayers)
+    @RenderCourt("C場", 3, courtCPlayers)
 
 </div>
+
+@functions {
+    string GetCourtName(int courtNo)
+    {
+        return courtNo switch
+        {
+            1 => "A",
+            2 => "B",
+            3 => "C",
+            _ => ""
+        };
+    }
+
+    Microsoft.AspNetCore.Html.IHtmlContent RenderCourt(string title, int courtNo, List<BadmintonQueueCore.Models.Player>? players)
+    {
+        var html = $@"
+<section class='area-card'>
+    <div class='area-title'>{title}</div>
+";
+
+        if (players != null && players.Any())
+        {
+            foreach (var player in players)
+            {
+                html += $@"
+<div class='player-card'>
+    <div class='player-name'>{player.PlayerName}</div>
+    <div class='btn-row'>
+        <form action='/Home/BackToWaiting' method='post'>
+            <input type='hidden' name='id' value='{player.Id}' />
+            <button class='btn btn-outline-secondary btn-sm-custom' type='submit'>下場回等待</button>
+        </form>
+        <form action='/Home/DeletePlayer' method='post'>
+            <input type='hidden' name='id' value='{player.Id}' />
+            <button class='btn btn-outline-danger btn-sm-custom' type='submit'>刪除</button>
+        </form>
+    </div>
+</div>";
+            }
+
+            html += $@"
+<form action='/Home/FinishCourt' method='post'>
+    <input type='hidden' name='courtNo' value='{courtNo}' />
+    <button class='btn btn-warning btn-sm-custom' type='submit'>本場結束</button>
+</form>";
+        }
+        else
+        {
+            html += "<div class='empty-text'>目前無人</div>";
+        }
+
+        html += "</section>";
+
+        return new Microsoft.AspNetCore.Html.HtmlString(html);
+    }
+}
