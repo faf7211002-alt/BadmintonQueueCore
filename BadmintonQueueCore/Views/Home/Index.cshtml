@@ -297,55 +297,70 @@
 }
 
 <script>
-      let lastRefresh = Date.now();
+    let lastBoardHtml = "";
 
     function keepAlive() {
-        fetch('/Home/Ping', {
-            cache: "no-store"
-        })
-        .catch(() => { });
+        fetch('/Home/Ping', { cache: "no-store" })
+            .catch(() => { });
     }
 
-    // 每15秒喚醒Render
+    function refreshBoardOnly() {
+        const active = document.activeElement;
+
+        // 正在輸入姓名時，不更新畫面，避免輸入被清掉
+        if (active && active.tagName === "INPUT" && active.value.length > 0) {
+            return;
+        }
+
+        fetch(window.location.pathname, { cache: "no-store" })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+
+                const newStats = doc.querySelector("#statsArea");
+                const newBoard = doc.querySelector("#boardArea");
+
+                const oldStats = document.querySelector("#statsArea");
+                const oldBoard = document.querySelector("#boardArea");
+
+                if (!newStats || !newBoard || !oldStats || !oldBoard) {
+                    return;
+                }
+
+                const newHtml = newStats.innerHTML + newBoard.innerHTML;
+
+                if (newHtml !== lastBoardHtml) {
+                    oldStats.innerHTML = newStats.innerHTML;
+                    oldBoard.innerHTML = newBoard.innerHTML;
+                    lastBoardHtml = newHtml;
+                }
+            })
+            .catch(() => {
+                keepAlive();
+            });
+    }
+
+    // 保活
     setInterval(keepAlive, 15000);
 
-    // 每5秒檢查一次
-    setInterval(function () {
+    // 每 3 秒只更新資料，不整頁刷新
+    setInterval(refreshBoardOnly, 3000);
 
-        // 超過60秒沒操作才更新
-      if (Date.now() - lastRefresh > 60000) {
-
-        keepAlive();
-
-        lastRefresh = Date.now();
-
-    }
-
-    }, 5000);
-
-    // 有任何操作就更新時間
-       document.addEventListener("scroll", function () {
-        lastRefresh = Date.now();
-    });
-
-    document.addEventListener("keydown", function () {
-        lastRefresh = Date.now();
-    });
-
-    document.addEventListener("touchstart", function () {
-        lastRefresh = Date.now();
-    });
-
-    // 回到頁面
+    // 回到頁面時更新一次
     window.addEventListener("focus", function () {
-
-        lastRefresh = Date.now();
-
         keepAlive();
-
+        refreshBoardOnly();
     });
 
-        setInterval(function () {
-        location.reload();
-    }, 5000);
+    document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) {
+            keepAlive();
+            refreshBoardOnly();
+        }
+    });
+
+    // 第一次先執行
+    keepAlive();
+    refreshBoardOnly();
 </script>
