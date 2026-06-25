@@ -293,4 +293,31 @@
 
         return new Microsoft.AspNetCore.Html.HtmlString(html);
     }
+
 }
+
+<script>
+    function keepAlive() {
+        fetch('/Home/Ping', {
+            cache: "no-store"
+        })
+        .then(function () {
+            console.log("alive");
+        })
+        .catch(function () {
+            console.log("failed");
+        });
+    }
+
+    keepAlive();
+
+    setInterval(keepAlive, 15000);
+
+    document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) {
+            keepAlive();
+        }
+    });
+
+    window.addEventListener("focus", keepAlive);
+</script>

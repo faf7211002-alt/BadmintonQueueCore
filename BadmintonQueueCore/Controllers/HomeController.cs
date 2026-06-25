@@ -272,5 +272,11 @@ namespace BadmintonQueueCore.Controllers
                 _ => "³õ¦a"
             };
         }
+
+        [HttpGet]
+        public IActionResult Ping()
+        {
+            return Ok("alive");
+        }
     }
 }
