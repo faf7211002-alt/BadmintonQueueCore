@@ -297,27 +297,51 @@
 }
 
 <script>
+      let lastRefresh = Date.now();
+
     function keepAlive() {
         fetch('/Home/Ping', {
             cache: "no-store"
         })
-        .then(function () {
-            console.log("alive");
-        })
-        .catch(function () {
-            console.log("failed");
-        });
+        .catch(() => { });
     }
 
-    keepAlive();
-
+    // 每15秒喚醒Render
     setInterval(keepAlive, 15000);
 
-    document.addEventListener("visibilitychange", function () {
-        if (!document.hidden) {
-            keepAlive();
-        }
+    // 每5秒檢查一次
+    setInterval(function () {
+
+        // 超過60秒沒操作才更新
+      if (Date.now() - lastRefresh > 60000) {
+
+        keepAlive();
+
+        lastRefresh = Date.now();
+
+    }
+
+    }, 5000);
+
+    // 有任何操作就更新時間
+       document.addEventListener("scroll", function () {
+        lastRefresh = Date.now();
     });
 
-    window.addEventListener("focus", keepAlive);
+    document.addEventListener("keydown", function () {
+        lastRefresh = Date.now();
+    });
+
+    document.addEventListener("touchstart", function () {
+        lastRefresh = Date.now();
+    });
+
+    // 回到頁面
+    window.addEventListener("focus", function () {
+
+        lastRefresh = Date.now();
+
+        keepAlive();
+
+    });
 </script>

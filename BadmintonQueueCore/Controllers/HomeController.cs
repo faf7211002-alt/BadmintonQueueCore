@@ -278,5 +278,12 @@ namespace BadmintonQueueCore.Controllers
         {
             return Ok("alive");
         }
+
+        [HttpGet]
+        public IActionResult Board()
+        {
+            Index();
+            return PartialView("_Board");
+        }
     }
 }
