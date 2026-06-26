@@ -297,70 +297,7 @@
 }
 
 <script>
-    let lastBoardHtml = "";
-
-    function keepAlive() {
-        fetch('/Home/Ping', { cache: "no-store" })
-            .catch(() => { });
-    }
-
-    function refreshBoardOnly() {
-        const active = document.activeElement;
-
-        // 正在輸入姓名時，不更新畫面，避免輸入被清掉
-        if (active && active.tagName === "INPUT" && active.value.length > 0) {
-            return;
-        }
-
-        fetch(window.location.pathname, { cache: "no-store" })
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, "text/html");
-
-                const newStats = doc.querySelector("#statsArea");
-                const newBoard = doc.querySelector("#boardArea");
-
-                const oldStats = document.querySelector("#statsArea");
-                const oldBoard = document.querySelector("#boardArea");
-
-                if (!newStats || !newBoard || !oldStats || !oldBoard) {
-                    return;
-                }
-
-                const newHtml = newStats.innerHTML + newBoard.innerHTML;
-
-                if (newHtml !== lastBoardHtml) {
-                    oldStats.innerHTML = newStats.innerHTML;
-                    oldBoard.innerHTML = newBoard.innerHTML;
-                    lastBoardHtml = newHtml;
-                }
-            })
-            .catch(() => {
-                keepAlive();
-            });
-    }
-
-    // 保活
-    setInterval(keepAlive, 15000);
-
-    // 每 3 秒只更新資料，不整頁刷新
-    setInterval(refreshBoardOnly, 3000);
-
-    // 回到頁面時更新一次
-    window.addEventListener("focus", function () {
-        keepAlive();
-        refreshBoardOnly();
-    });
-
-    document.addEventListener("visibilitychange", function () {
-        if (!document.hidden) {
-            keepAlive();
-            refreshBoardOnly();
-        }
-    });
-
-    // 第一次先執行
-    keepAlive();
-    refreshBoardOnly();
+    setInterval(function () {
+        location.reload();
+    }, 5000);
 </script>
