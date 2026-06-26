@@ -296,8 +296,39 @@
 
 }
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+
 <script>
-    setInterval(function () {
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/queueHub")
+        .withAutomaticReconnect()
+        .build();
+
+    connection.on("RefreshPage", function () {
         location.reload();
-    }, 5000);
+    });
+
+    async function startConnection() {
+        try {
+            await connection.start();
+            console.log("SignalR 已連線");
+        } catch (err) {
+            console.error(err);
+            setTimeout(startConnection, 5000);
+        }
+    }
+
+    connection.onreconnecting(() => {
+        console.log("重新連線中...");
+    });
+
+    connection.onreconnected(() => {
+        console.log("重新連線成功");
+    });
+
+    connection.onclose(() => {
+        setTimeout(startConnection, 5000);
+    });
+
+    startConnection();
 </script>

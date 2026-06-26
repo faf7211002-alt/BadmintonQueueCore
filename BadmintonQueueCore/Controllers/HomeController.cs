@@ -1,17 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using BadmintonQueueCore.Data;
 using BadmintonQueueCore.Models;
+using BadmintonQueueCore.Hubs;
 
 namespace BadmintonQueueCore.Controllers
 {
     public class HomeController : Controller
     {
         private readonly AppDbContext _db;
+        private readonly IHubContext<QueueHub> _hub;
         private const int MaxPlayers = 4;
 
-        public HomeController(AppDbContext db)
+        public HomeController(AppDbContext db, IHubContext<QueueHub> hub)
         {
             _db = db;
+            _hub = hub;
         }
 
         public IActionResult Index()
@@ -42,7 +46,7 @@ namespace BadmintonQueueCore.Controllers
         }
 
         [HttpPost]
-        public IActionResult AddPlayer(string playerName)
+        public async Task<IActionResult> AddPlayer(string playerName)
         {
             if (!string.IsNullOrWhiteSpace(playerName))
             {
@@ -56,13 +60,14 @@ namespace BadmintonQueueCore.Controllers
                 });
 
                 _db.SaveChanges();
+                await NotifyRefresh();
             }
 
             return RedirectToAction("Index");
         }
 
         [HttpPost]
-        public IActionResult MoveToReady(int id, int groupNo)
+        public async Task<IActionResult> MoveToReady(int id, int groupNo)
         {
             if (groupNo < 1 || groupNo > 5)
                 return RedirectToAction("Index");
@@ -84,13 +89,14 @@ namespace BadmintonQueueCore.Controllers
                 player.GroupNo = groupNo;
                 player.QueueNo = GetNextQueueNo();
                 _db.SaveChanges();
+                await NotifyRefresh();
             }
 
             return RedirectToAction("Index");
         }
 
         [HttpPost]
-        public IActionResult MoveToCourt(int id, int courtNo)
+        public async Task<IActionResult> MoveToCourt(int id, int courtNo)
         {
             if (courtNo < 1 || courtNo > 3)
                 return RedirectToAction("Index");
@@ -111,13 +117,14 @@ namespace BadmintonQueueCore.Controllers
                 player.CourtNo = courtNo;
                 player.GroupNo = 0;
                 _db.SaveChanges();
+                await NotifyRefresh();
             }
 
             return RedirectToAction("Index");
         }
 
         [HttpPost]
-        public IActionResult MoveReadyGroupToCourt(int groupNo, int courtNo)
+        public async Task<IActionResult> MoveReadyGroupToCourt(int groupNo, int courtNo)
         {
             if (groupNo < 1 || groupNo > 5 || courtNo < 1 || courtNo > 3)
                 return RedirectToAction("Index");
@@ -152,12 +159,13 @@ namespace BadmintonQueueCore.Controllers
             ShiftReadyGroups(groupNo);
 
             _db.SaveChanges();
+            await NotifyRefresh();
 
             return RedirectToAction("Index");
         }
 
         [HttpPost]
-        public IActionResult FinishCourt(int courtNo)
+        public async Task<IActionResult> FinishCourt(int courtNo)
         {
             if (courtNo < 1 || courtNo > 3)
                 return RedirectToAction("Index");
@@ -192,12 +200,13 @@ namespace BadmintonQueueCore.Controllers
             }
 
             _db.SaveChanges();
+            await NotifyRefresh();
 
             return RedirectToAction("Index");
         }
 
         [HttpPost]
-        public IActionResult BackToWaiting(int id)
+        public async Task<IActionResult> BackToWaiting(int id)
         {
             var player = _db.Players.Find(id);
 
@@ -208,13 +217,14 @@ namespace BadmintonQueueCore.Controllers
                 player.GroupNo = 0;
                 player.QueueNo = GetNextQueueNo();
                 _db.SaveChanges();
+                await NotifyRefresh();
             }
 
             return RedirectToAction("Index");
         }
 
         [HttpPost]
-        public IActionResult DeletePlayer(int id)
+        public async Task<IActionResult> DeletePlayer(int id)
         {
             var player = _db.Players.Find(id);
 
@@ -222,9 +232,21 @@ namespace BadmintonQueueCore.Controllers
             {
                 _db.Players.Remove(player);
                 _db.SaveChanges();
+                await NotifyRefresh();
             }
 
             return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        public IActionResult Ping()
+        {
+            return Ok("alive");
+        }
+
+        private async Task NotifyRefresh()
+        {
+            await _hub.Clients.All.SendAsync("RefreshPage");
         }
 
         private List<Player> GetCourtPlayers(int courtNo)
@@ -271,19 +293,6 @@ namespace BadmintonQueueCore.Controllers
                 3 => "C³õ",
                 _ => "³õ¦a"
             };
-        }
-
-        [HttpGet]
-        public IActionResult Ping()
-        {
-            return Ok("alive");
-        }
-
-        [HttpGet]
-        public IActionResult Board()
-        {
-            Index();
-            return PartialView("_Board");
         }
     }
 }

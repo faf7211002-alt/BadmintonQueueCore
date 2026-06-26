@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using BadmintonQueueCore.Data;
+using BadmintonQueueCore.Hubs;   // ← 新增
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddSignalR();   // ← 新增
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(
@@ -30,8 +33,10 @@ app.UseRouting();
 
 app.UseAuthorization();
 
+app.MapHub<QueueHub>("/queueHub");   // ← 新增
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.Run(); 
+app.Run();
