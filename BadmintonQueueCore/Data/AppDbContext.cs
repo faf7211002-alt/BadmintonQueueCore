@@ -11,5 +11,7 @@ namespace BadmintonQueueCore.Data
         }
 
         public DbSet<Player> Players { get; set; }
+
+        public DbSet<CourtSetting> CourtSettings { get; set; }
     }
 }

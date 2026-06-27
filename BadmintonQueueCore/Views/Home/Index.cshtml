@@ -112,9 +112,9 @@
     總人數：@ViewBag.TotalCount　
     等待：@ViewBag.WaitingCount　
     備戰：@ViewBag.ReadyCount　
-    A場：@(courtAPlayers?.Count ?? 0)　
-    B場：@(courtBPlayers?.Count ?? 0)　
-    C場：@(courtCPlayers?.Count ?? 0)
+    3號場：@(courtAPlayers?.Count ?? 0)　
+    4號場：@(courtBPlayers?.Count ?? 0)　
+    6-7號場：@(courtCPlayers?.Count ?? 0)
 </div>
 
 <form asp-action="AddPlayer" method="post" class="add-form">
@@ -249,9 +249,9 @@
         }
     </section>
 
-    @RenderCourt("A場", 1, courtAPlayers)
-    @RenderCourt("B場", 2, courtBPlayers)
-    @RenderCourt("C場", 3, courtCPlayers)
+    @RenderCourt("3號場", 1, courtAPlayers)
+    @RenderCourt("4號場", 2, courtBPlayers)
+    @RenderCourt("6-7號場", 3, courtCPlayers)
 
 </div>
 
@@ -260,9 +260,9 @@
     {
         return courtNo switch
         {
-            1 => "A",
-            2 => "B",
-            3 => "C",
+            1 => "3號",
+            2 => "4號",
+            3 => "6-7號",
             _ => ""
         };
     }

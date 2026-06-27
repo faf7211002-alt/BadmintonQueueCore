@@ -322,9 +322,9 @@ namespace BadmintonQueueCore.Controllers
         {
             return courtNo switch
             {
-                1 => "A놓",
-                2 => "B놓",
-                3 => "C놓",
+                1 => "3많놓",
+                2 => "4많놓",
+                3 => "6-7많놓",
                 _ => "놓쫆"
             };
         }
