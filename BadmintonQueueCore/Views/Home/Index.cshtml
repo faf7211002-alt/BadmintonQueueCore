@@ -122,6 +122,22 @@
     <button class="btn btn-primary" type="submit">加入等待區</button>
 </form>
 
+
+<hr />
+
+<form asp-action="AddPlayers" method="post">
+    <textarea class="form-control"
+              name="playerNames"
+              rows="4"
+              placeholder="一行一位球員，也可以用逗號、頓號分隔"></textarea>
+
+    <br />
+
+    <button class="btn btn-success">
+        一次加入全部球員
+    </button>
+</form>
+
 <div class="main-layout">
 
     <section class="area-card">

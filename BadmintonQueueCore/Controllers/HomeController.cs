@@ -67,6 +67,40 @@ namespace BadmintonQueueCore.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> AddPlayers(string playerNames)
+        {
+            if (!string.IsNullOrWhiteSpace(playerNames))
+            {
+                var names = playerNames
+                    .Split(new[] { "\r\n", "\n", "\r", "¡B", ",", "¡A", " " }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Trim())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToList();
+
+                foreach (var name in names)
+                {
+                    _db.Players.Add(new Player
+                    {
+                        PlayerName = name,
+                        QueueNo = GetNextQueueNo(),
+                        Status = "Waiting",
+                        CourtNo = 0,
+                        GroupNo = 0
+                    });
+
+                    _db.SaveChanges();
+                }
+
+                await NotifyRefresh();
+            }
+
+            return RedirectToAction("Index");
+        }
+        [HttpPost]
+
+
+    
+
         public async Task<IActionResult> MoveToReady(int id, int groupNo)
         {
             if (groupNo < 1 || groupNo > 5)
